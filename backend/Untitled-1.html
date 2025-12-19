@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>User-Friendly Vending Machine</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #f5f5f5;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      margin: 0;
+    }
+    .container {
+      background-color: #fff;
+      padding: 20px;
+      border-radius: 10px;
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+      width: 400px;
+      text-align: center;
+    }
+    h1 {
+      color: #333;
+    }
+    .balance {
+      font-size: 18px;
+      font-weight: bold;
+      margin: 15px 0;
+      color: #444;
+    }
+    button {
+      padding: 10px 20px;
+      margin: 5px;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      font-size: 16px;
+    }
+    .money-options button {
+      background-color: #4caf50;
+      color: white;
+    }
+    .money-options button:hover {
+      background-color: #3e8e41;
+    }
+    .error {
+      color: red;
+    }
+    .success {
+      color: green;
+    }
+    .state {
+      font-size: 16px;
+      font-weight: bold;
+      margin: 10px 0;
+      color: #555;
+    }
+    .highlight {
+      font-weight: bold;
+      color: #000;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>DFA Vending Machine</h1>
+    <div class="balance" id="balance">Balance: $0.00</div>
+    <div class="money-options">
+      <button onclick="insertMoney(0.25)">Add $0.25</button>
+      <button onclick="insertMoney(1.00)">Add $1.00</button>
+      <button onclick="insertMoney(5.00)">Add $5.00</button>
+    </div>
+    <h3>Items Menu</h3>
+    <div>
+      <label>
+        Biscuit ($10) x 
+        <input type="number" id="biscuitQty" value="0" min="0" step="1">
+      </label><br>
+      <label>
+        Chocolate ($10) x 
+        <input type="number" id="chocolateQty" value="0" min="0" step="1">
+      </label><br>
+      <label>
+        Chocolate Premium ($20) x 
+        <input type="number" id="chocolatePremiumQty" value="0" min="0" step="1">
+      </label><br>
+      <label>
+        Cappuccino ($15) x 
+        <input type="number" id="cappuccinoQty" value="0" min="0" step="1">
+      </label><br>
+      <label>
+        Latte ($12) x 
+        <input type="number" id="latteQty" value="0" min="0" step="1">
+      </label><br>
+      <label>
+        Espresso ($10) x 
+        <input type="number" id="espressoQty" value="0" min="0" step="1">
+      </label><br>
+    </div>
+    <button onclick="processOrder()">Buy</button>
+    <div id="state" class="state">Current State: Start</div>
+    <div id="message" class="error"></div>
+    <div id="success" class="success"></div>
+  </div>
+
+ <script>
+    // DFA Variables
+    let balance = 0.00;
+    let dfaState = "Start"; // Initial state
+
+    function transitionDFA(action) {
+      if (action === "addFunds") {
+        dfaState = "Adding Funds";
+      } else if (action === "selectItems") {
+        dfaState = "Selecting Items";
+      } else if (action === "insufficientFunds") {
+        dfaState = "Insufficient Funds";
+      } else if (action === "acceptingState") {
+        dfaState = "Accepting State";
+      }
+      updateState();
+    }
+
+    function insertMoney(amount) {
+      balance += amount;
+      updateBalance();
+      clearMessages();
+      transitionDFA("addFunds");
+    }
+
+    function processOrder() {
+      const message = document.getElementById('message');
+      const success = document.getElementById('success');
+      const biscuitQty = parseInt(document.getElementById('biscuitQty').value) || 0;
+      const chocolateQty = parseInt(document.getElementById('chocolateQty').value) || 0;
+      const chocolatePremiumQty = parseInt(document.getElementById('chocolatePremiumQty').value) || 0;
+      const cappuccinoQty = parseInt(document.getElementById('cappuccinoQty').value) || 0;
+      const latteQty = parseInt(document.getElementById('latteQty').value) || 0;
+      const espressoQty = parseInt(document.getElementById('espressoQty').value) || 0;
+
+      clearMessages();
+
+      // Calculate the total cost based on the quantities selected
+      const totalCost = (biscuitQty * 10) + (chocolateQty * 10) + (chocolatePremiumQty * 20) + (cappuccinoQty * 15) + (latteQty * 12) + (espressoQty * 10);
+
+      if (biscuitQty === 0 && chocolateQty === 0 && chocolatePremiumQty === 0 && cappuccinoQty === 0 && latteQty === 0 && espressoQty === 0) {
+        displayError("Please select at least one item.");
+        transitionDFA("selectItems");
+        return;
+      }
+
+      if (balance >= totalCost) {
+        transitionDFA("acceptingState");
+        const change = (balance - totalCost).toFixed(2);
+        balance = 0; // Reset balance after purchase
+        updateBalance();
+        displaySuccess(
+          `You bought: ${biscuitQty} Biscuit(s), ${chocolateQty} Chocolate(s), ${chocolatePremiumQty} Chocolate Premium(s), ${cappuccinoQty} Cappuccino(s), ${latteQty} Latte(s), ${espressoQty} Espresso(s). Total cost: $${totalCost}. Change: $${change}`
+        );
+      } else {
+        const deficit = (totalCost - balance).toFixed(2);
+        transitionDFA("insufficientFunds");
+        displayError(`Insufficient funds. Please add $${deficit} more.`);
+      }
+    }
+
+    function updateBalance() {
+      document.getElementById('balance').innerText = `Balance: $${balance.toFixed(2)}`;
+    }
+
+    function updateState() {
+      document.getElementById('state').innerText = `Current State: ${dfaState}`;
+    }
+
+    function clearMessages() {
+      document.getElementById('message').innerText = '';
+      document.getElementById('success').innerText = '';
+    }
+
+    function displayError(message) {
+      document.getElementById('message').innerText = message;
+    }
+
+    function displaySuccess(message) {
+      document.getElementById('success').innerText = message;
+    }
+  </script>
+</body>
+</html>
+             
+
